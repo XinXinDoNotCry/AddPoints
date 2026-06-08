@@ -17,7 +17,8 @@
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             min-height: 100vh;
-            padding: 20px;
+            padding: 12px;
+            -webkit-tap-highlight-color: transparent;
         }
 
         @keyframes gradientBG {
@@ -27,11 +28,11 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 600px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.98);
-            border-radius: 24px;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
             backdrop-filter: blur(10px);
         }
@@ -39,71 +40,69 @@
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 35px 30px;
+            padding: 25px 20px;
             text-align: center;
         }
 
         header h1 {
-            font-size: 32px;
-            margin-bottom: 8px;
+            font-size: 24px;
+            margin-bottom: 6px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
         header p {
             opacity: 0.9;
-            font-size: 15px;
+            font-size: 14px;
         }
 
         .stats-bar {
             background: #f8f9fa;
-            padding: 20px 30px;
+            padding: 15px 16px;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: 10px;
             border-bottom: 1px solid #e5e7eb;
         }
 
         .stat-item {
             text-align: center;
-            padding: 15px;
+            padding: 12px 8px;
             background: white;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 800;
             color: #667eea;
         }
 
         .stat-label {
-            font-size: 13px;
+            font-size: 12px;
             color: #6b7280;
-            margin-top: 5px;
+            margin-top: 4px;
         }
 
         .controls {
-            padding: 20px 30px;
+            padding: 16px;
             background: #f8f9fa;
             display: flex;
+            flex-direction: column;
             gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
         }
 
         .search-box {
-            flex: 1;
-            min-width: 200px;
+            width: 100%;
             position: relative;
         }
 
         .search-box input {
             width: 100%;
-            padding: 14px 50px 14px 18px;
+            padding: 12px 16px;
             border: 2px solid #e0e0e0;
             border-radius: 12px;
-            font-size: 15px;
+            font-size: 16px;
             transition: all 0.3s;
             background: white;
         }
@@ -118,16 +117,19 @@
 
 
         .btn {
-            padding: 12px 20px;
+            padding: 14px 18px;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
+            border-radius: 14px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
+            min-height: 48px;
+            touch-action: manipulation;
         }
 
         .btn:hover {
@@ -170,24 +172,25 @@
         }
 
         .btn-sm {
-            padding: 10px 16px;
-            font-size: 14px;
-            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 15px;
+            border-radius: 12px;
+            min-height: 44px;
         }
 
         .student-list {
-            padding: 25px 30px 35px;
+            padding: 16px 12px;
         }
 
         .student-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 16px;
-            padding: 22px;
-            margin-bottom: 16px;
+            padding: 16px 14px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 18px;
+            gap: 14px;
             transition: all 0.3s;
             border: 1px solid #e5e7eb;
             position: relative;
@@ -244,14 +247,14 @@
         }
 
         .student-avatar {
-            width: 60px;
-            height: 60px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: 24px;
             color: white;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
@@ -262,14 +265,14 @@
         }
 
         .student-name {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: #1f2937;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .student-score {
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 900;
         }
 
@@ -287,15 +290,17 @@
 
         .student-actions {
             display: flex;
+            flex-direction: column;
             gap: 8px;
             flex-wrap: wrap;
             justify-content: flex-end;
         }
 
         .quick-actions {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .modal {
@@ -319,8 +324,8 @@
         .modal-content {
             background: white;
             border-radius: 20px;
-            padding: 35px;
-            width: 90%;
+            padding: 24px 20px;
+            width: 92%;
             max-width: 520px;
             animation: modalSlide 0.4s ease;
             box-shadow: 0 25px 80px rgba(0,0,0,0.3);
@@ -338,9 +343,9 @@
         }
 
         .modal-header {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             color: #1f2937;
         }
 
@@ -525,9 +530,11 @@
                 <option value="score-desc">按分数 (高→低)</option>
                 <option value="score-asc">按分数 (低→高)</option>
             </select>
-            <button class="btn btn-success" onclick="openBatchAddModal()">🏆 全班统一加分</button>
-            <button class="btn btn-warning" onclick="exportData()">📊 导出数据</button>
-            <button class="btn btn-secondary" onclick="resetData()">🔄 重置数据</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <button class="btn btn-success" onclick="openBatchAddModal()" style="grid-column:span 2;">🏆 全班统一加分</button>
+                <button class="btn btn-warning" onclick="exportData()">📊 导出数据</button>
+                <button class="btn btn-secondary" onclick="resetData()">🔄 重置数据</button>
+            </div>
         </div>
 
         <div class="student-list" id="studentList">
@@ -780,9 +787,9 @@
                         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
                             <div class="quick-actions">
                                 <button class="btn btn-success btn-sm" onclick="quickUpdate(${student.id}, 1)">+1</button>
-                                <button class="btn btn-success btn-sm" onclick="quickUpdate(${student.id}, 5)">+5</button>
+                                <button class="btn btn-success btn-sm" onclick="quickUpdate(${student.id}, 3)">+3</button>
                                 <button class="btn btn-danger btn-sm" onclick="quickUpdate(${student.id}, -1)">-1</button>
-                                <button class="btn btn-danger btn-sm" onclick="quickUpdate(${student.id}, -5)">-5</button>
+                                <button class="btn btn-danger btn-sm" onclick="quickUpdate(${student.id}, -4)">-4</button>
                             </div>
                             <div>
                                 <button class="btn btn-success btn-sm" onclick="openUpdateScoreModal(${student.id}, 'add')">➕ 加分</button>
