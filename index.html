@@ -563,6 +563,8 @@
                 <div class="preset-reasons">
                     <span class="preset-tag" onclick="setReason('打扫卫生')">打扫卫生</span>
                     <span class="preset-tag" onclick="setReason('班委')">班委</span>
+                    <span class="preset-tag" onclick="setReason('优秀寝室')">优秀寝室</span>
+                    <span class="preset-tag" onclick="setReason('讲话')">讲话</span>
                     <span class="preset-tag" onclick="setReason('床铺不整齐')">床铺不整齐</span>
                     <span class="preset-tag" onclick="setReason('作业未完成')">作业未完成</span>
                 </div>
@@ -682,14 +684,24 @@
                     '简思艺', '詹思钰'
                 ];
                 
-                students = studentNames.map((name, index) => ({
-                    id: index + 1,
-                    studentId: String(index + 1),
-                    name: name,
-                    score: 80,
-                    history: [],
-                    avatar: getAvatar()
-                }));
+                students = studentNames.map((name, index) => {
+                    // 设置学号
+                    let stuId = index + 1;
+                    // 刘承轩13，刘浩宇14
+                    if (name === '刘承轩') {
+                        stuId = 13;
+                    } else if (name === '刘浩宇') {
+                        stuId = 14;
+                    }
+                    return {
+                        id: index + 1,
+                        studentId: String(stuId),
+                        name: name,
+                        score: 80,
+                        history: [],
+                        avatar: getAvatar()
+                    };
+                });
                 
                 saveData();
             }
