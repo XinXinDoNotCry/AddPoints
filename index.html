@@ -555,7 +555,7 @@
             </div>
             <div class="form-group">
                 <label>分数</label>
-                <input type="number" id="scoreValue" value="1" min="1">
+                <input type="number" id="scoreValue" value="1" min="0.5" step="0.5">
             </div>
             <div class="form-group">
                 <label>理由</label>
@@ -726,8 +726,8 @@
             const min = Math.min(...scores);
 
             document.getElementById('statTotal').textContent = total;
-            document.getElementById('statMax').textContent = max;
-            document.getElementById('statMin').textContent = min;
+            document.getElementById('statMax').textContent = formatScore(max);
+            document.getElementById('statMin').textContent = formatScore(min);
         }
 
         function getScoreClass(score) {
@@ -740,6 +740,12 @@
             if (score < 60) return 'danger';
             if (score < 70) return 'warning';
             return '';
+        }
+
+        // 格式化分数显示：整数显示整数，非整数最多保留 1 位小数，避免浮点误差长尾
+        function formatScore(score) {
+            const rounded = Math.round(score * 10) / 10;
+            return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
         }
 
         function sortStudents() {
@@ -791,7 +797,7 @@
                             <div class="student-name">${student.name}</div>
                             <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">学号：${student.studentId || '暂无'}</div>
                             <div class="student-score ${getScoreClass(student.score)}">
-                                ${student.score} 分
+                                ${formatScore(student.score)} 分
                             </div>
                         </div>
                     </div>
@@ -857,16 +863,32 @@
 
         function setReason(text) {
             document.getElementById('scoreReason').value = text;
+            // 预设标签联动：自动填入分值与加减类型
+            const presetScores = {
+                '打扫卫生': { value: 3, type: 'add' },
+                '班委': { value: 1, type: 'add' },
+                '优秀寝室': { value: 3, type: 'add' },
+                '讲话': { value: 4, type: 'subtract' },
+                '床铺不整齐': { value: 1, type: 'subtract' },
+                '作业未完成': { value: 2, type: 'subtract' }
+            };
+            if (presetScores[text]) {
+                document.getElementById('scoreType').value = presetScores[text].type;
+                document.getElementById('scoreValue').value = presetScores[text].value;
+            }
         }
 
         function updateScore() {
             const type = document.getElementById('scoreType').value;
-            const value = parseInt(document.getElementById('scoreValue').value) || 1;
+            let value = parseFloat(document.getElementById('scoreValue').value);
+            if (isNaN(value) || value <= 0) value = 1;
+            // 仅允许 0.5 的倍数，避免出现 0.3、0.7 等
+            value = Math.round(value * 2) / 2;
             const reason = document.getElementById('scoreReason').value.trim() || '无理由';
 
             const student = students.find(s => s.id === currentStudentId);
             const change = type === 'add' ? value : -value;
-            student.score += change;
+            student.score = Math.round((student.score + change) * 10) / 10;
 
             student.history.unshift({
                 change: change,
@@ -881,22 +903,42 @@
 
         function openHistoryModal(id) {
             const student = students.find(s => s.id === id);
+            currentStudentId = id;
             document.getElementById('historyTitle').textContent = `${student.name} 的操行分历史`;
-            
+
             const historyList = document.getElementById('historyList');
             if (student.history.length === 0) {
                 historyList.innerHTML = '<div class="empty-state-text" style="text-align:center;padding:50px;">暂无历史记录</div>';
             } else {
-                historyList.innerHTML = student.history.map(h => `
-                    <div class="history-item ${h.change >= 0 ? 'positive' : 'negative'}">
-                        <div class="history-score">${h.change >= 0 ? '+' : ''}${h.change} 分</div>
-                        <div class="history-reason">${h.reason}</div>
-                        <div class="history-date">${h.date}</div>
+                historyList.innerHTML = student.history.map((h, idx) => `
+                    <div class="history-item ${h.change >= 0 ? 'positive' : 'negative'}" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                        <div style="flex:1;">
+                            <div class="history-score">${h.change >= 0 ? '+' : ''}${h.change} 分</div>
+                            <div class="history-reason">${h.reason}</div>
+                            <div class="history-date">${h.date}</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" style="flex-shrink:0;" onclick="deleteHistoryItem(${id}, ${idx})">🗑️ 删除</button>
                     </div>
                 `).join('');
             }
 
             openModal('historyModal');
+        }
+
+        function deleteHistoryItem(studentId, index) {
+            const student = students.find(s => s.id === studentId);
+            if (!student || !student.history || !student.history[index]) return;
+            const record = student.history[index];
+            const actionLabel = record.change >= 0 ? `撤销 +${record.change} 分` : `撤销 ${record.change} 分`;
+            if (!confirm(`确定要删除这条记录吗？\n${record.date}\n${record.reason}\n该操作将${actionLabel}。`)) return;
+
+            // 回滚分数：减去原 change（加分则扣回去，减分则加回去）
+            student.score = Math.round((student.score - record.change) * 10) / 10;
+            student.history.splice(index, 1);
+
+            saveData();
+            renderStudents(document.getElementById('searchInput').value);
+            openHistoryModal(studentId); // 重新渲染历史弹窗
         }
 
         function deleteStudent(id) {
@@ -926,7 +968,7 @@
                 return `
                 <div style="page-break-inside: avoid; margin: 20px 0; padding: 15px 0; border-bottom: 1px solid #000;">
                     <h3 style="margin: 0 0 10px 0; font-size: 18px;">
-                        学号 ${student.studentId} - ${student.name} | 当前操行分：${student.score} 分
+                        学号 ${student.studentId} - ${student.name} | 当前操行分：${formatScore(student.score)} 分
                     </h3>
                     ${student.history && student.history.length > 0 ? `
                         <div style="margin-left: 20px;">
