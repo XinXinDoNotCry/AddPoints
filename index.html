@@ -59,7 +59,7 @@
             background: #f8f9fa;
             padding: 15px 16px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
             border-bottom: 1px solid #e5e7eb;
         }
@@ -191,32 +191,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
-            transition: all 0.3s;
             border: 1px solid #e5e7eb;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .student-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 5px;
-            background: #667eea;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .student-card:hover {
-            transform: translateX(5px) translateY(-2px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-            border-color: #667eea;
-        }
-
-        .student-card:hover::before {
-            opacity: 1;
         }
 
         .student-card.warning {
@@ -224,19 +199,9 @@
             background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
         }
 
-        .student-card.warning::before {
-            background: #f59e0b;
-            opacity: 1;
-        }
-
         .student-card.danger {
             border-color: #ef4444;
             background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        }
-
-        .student-card.danger::before {
-            background: #ef4444;
-            opacity: 1;
         }
 
         .student-info {
@@ -519,6 +484,14 @@
                 <div class="stat-value" id="statMin">0</div>
                 <div class="stat-label">最低分</div>
             </div>
+            <div class="stat-item">
+                <div class="stat-value" id="statExceedCount">0</div>
+                <div class="stat-label">超100分人数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="statExceedTotal">0</div>
+                <div class="stat-label">共超出分数</div>
+            </div>
         </div>
 
         <div class="controls">
@@ -532,7 +505,9 @@
             </select>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <button class="btn btn-success" onclick="openBatchAddModal()" style="grid-column:span 2;">🏆 全班统一加分</button>
-                <button class="btn btn-warning" onclick="exportData()">📊 导出数据</button>
+                <button class="btn btn-warning" onclick="exportData()">📊 导出Word</button>
+                <button class="btn btn-info" onclick="exportJSON()">📁 导出JSON</button>
+                <button class="btn btn-info" onclick="importJSON()">📥 导入JSON</button>
                 <button class="btn btn-secondary" onclick="resetData()">🔄 重置数据</button>
             </div>
         </div>
@@ -686,7 +661,7 @@
                         .from('sync_data')
                         .select('payload')
                         .eq('id', 1)
-                        .single();
+                        .maybeSingle();
                     const { data, error } = await Promise.race([query, timeout.then(() => ({ data: null, error: 'timeout' }))]);
                     if (!error && data && data.payload && data.payload.length > 0) {
                         students = data.payload;
@@ -723,6 +698,8 @@
                     let stuId = index + 1;
                     if (name === '刘承轩') stuId = 13;
                     else if (name === '刘浩宇') stuId = 14;
+                    else if (name === '王锐杰') stuId = 6;
+                    else if (name === '王鏖杰') stuId = 7;
                     return {
                         id: index + 1,
                         studentId: String(stuId),
@@ -757,6 +734,8 @@
                 document.getElementById('statTotal').textContent = '0';
                 document.getElementById('statMax').textContent = '0';
                 document.getElementById('statMin').textContent = '0';
+                document.getElementById('statExceedCount').textContent = '0';
+                document.getElementById('statExceedTotal').textContent = '0';
                 return;
             }
 
@@ -765,9 +744,22 @@
             const max = Math.max(...scores);
             const min = Math.min(...scores);
 
+            // 统计超过100分的情况
+            let exceedCount = 0;
+            let exceedTotal = 0;
+            students.forEach(s => {
+                const over = Math.max(0, s.score - 100);
+                if (over > 0) {
+                    exceedCount++;
+                    exceedTotal += over;
+                }
+            });
+
             document.getElementById('statTotal').textContent = total;
             document.getElementById('statMax').textContent = formatScore(max);
             document.getElementById('statMin').textContent = formatScore(min);
+            document.getElementById('statExceedCount').textContent = exceedCount;
+            document.getElementById('statExceedTotal').textContent = formatScore(exceedTotal);
         }
 
         function getScoreClass(score) {
@@ -1067,8 +1059,10 @@
     <div class="info">导出时间：${exportTime}</div>
     <div class="stats">
         <span>学生人数：${students.length} 人</span>
-        <span>最高分：${students.length > 0 ? Math.max(...students.map(s => s.score)) : 0} 分</span>
-        <span>最低分：${students.length > 0 ? Math.min(...students.map(s => s.score)) : 0} 分</span>
+        <span>最高分：${students.length > 0 ? formatScore(Math.max(...students.map(s => s.score))) : 0} 分</span>
+        <span>最低分：${students.length > 0 ? formatScore(Math.min(...students.map(s => s.score))) : 0} 分</span>
+        <span>超100分人数：${students.filter(s => s.score > 100).length} 人</span>
+        <span>共超出：${formatScore(students.reduce((sum, s) => sum + Math.max(0, s.score - 100), 0))} 分</span>
     </div>
     <div style="margin-top: 20px;"></div>
     ${studentContent}
@@ -1083,6 +1077,51 @@
             a.download = `2027届4班操行分_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.doc`;
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        function exportJSON() {
+            const exportData = {
+                version: '1.2',
+                exportTime: new Date().toLocaleString('zh-CN'),
+                students: students
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `操行分备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (!data.students || !Array.isArray(data.students)) {
+                            alert('无效的备份文件！请选择正确的 JSON 文件。');
+                            return;
+                        }
+                        if (!confirm(`即将导入 ${data.students.length} 名学生的数据（备份时间：${data.exportTime || '未知'}），当前数据将被覆盖，确定继续？`)) return;
+                        students = data.students;
+                        saveData().then(() => {
+                            renderStudents(document.getElementById('searchInput').value);
+                            alert('数据导入成功！');
+                        });
+                    } catch (err) {
+                        alert('文件解析失败，请确认是有效的 JSON 备份文件。');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
         }
 
         function resetData() {
