@@ -292,6 +292,9 @@
             padding: 24px 20px;
             width: 92%;
             max-width: 520px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
             animation: modalSlide 0.4s ease;
             box-shadow: 0 25px 80px rgba(0,0,0,0.3);
         }
@@ -312,6 +315,7 @@
             font-weight: 700;
             margin-bottom: 20px;
             color: #1f2937;
+            flex-shrink: 0;
         }
 
         .form-group {
@@ -376,11 +380,12 @@
             display: flex;
             gap: 12px;
             justify-content: flex-end;
-            margin-top: 25px;
+            margin-top: 15px;
+            flex-shrink: 0;
         }
 
         .history-list {
-            max-height: 1000px;
+            flex: 1;
             overflow-y: auto;
             margin-top: 15px;
         }
@@ -1188,6 +1193,13 @@
         (async function init() {
             await loadData();
             renderStudents();
+
+            // 点击弹窗背景关闭弹窗（手机端重要：避免关闭按钮不可见时无法退出）
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) closeModal(this.id);
+                });
+            });
 
             // 实时监听 Supabase 数据变更（其他设备修改时自动同步）
             if (sb) {
