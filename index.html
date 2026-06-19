@@ -605,7 +605,18 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Supabase 配置（CDN 不可用时自动回退到纯 localStorage 模式）
+        const SUPABASE_URL = 'https://yaolwvcnwbhuagehhgxd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlhb2x3dmNud2JodWFnZWhoZ3hkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDYwNDcsImV4cCI6MjA5NzM4MjA0N30.k5eF1dp702EvPI4aHPe_3UkmaSY5NSLL2qDA_pcO4uc';
+        let sb = null;
+        try {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+            console.warn('Supabase 初始化失败，使用本地存储模式');
+        }
+
         let students = [];
         let currentStudentId = null;
         let currentSort = 'studentId';
@@ -658,12 +669,36 @@
             return avatars[Math.floor(Math.random() * avatars.length)];
         }
 
-        function loadData() {
+        async function loadData() {
+            // 0. 先同步读取 localStorage，保证页面立即渲染
             const saved = localStorage.getItem('students');
             if (saved) {
                 students = JSON.parse(saved);
-            } else {
-                // 按姓氏笔画数从少到多排序（完整46个学生）
+            }
+
+            // 1. 后台尝试从 Supabase 拉取最新数据（带超时 5 秒）
+            if (sb) {
+                try {
+                    const timeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('timeout')), 5000)
+                    );
+                    const query = sb
+                        .from('sync_data')
+                        .select('payload')
+                        .eq('id', 1)
+                        .single();
+                    const { data, error } = await Promise.race([query, timeout.then(() => ({ data: null, error: 'timeout' }))]);
+                    if (!error && data && data.payload && data.payload.length > 0) {
+                        students = data.payload;
+                        localStorage.setItem('students', JSON.stringify(students));
+                    }
+                } catch (e) {
+                    // Supabase 不可用，使用已有的 localStorage 数据
+                }
+            }
+
+            // 2. 如果都没有数据，初始化默认数据
+            if (!students || students.length === 0) {
                 const studentNames = [
                     '干贝蕾', '万乾江', '马远晨', '马雨潼',
                     '王依恋', '王鏖杰', '王锐杰', '韦青怡',
@@ -685,14 +720,9 @@
                 ];
                 
                 students = studentNames.map((name, index) => {
-                    // 设置学号
                     let stuId = index + 1;
-                    // 刘承轩13，刘浩宇14
-                    if (name === '刘承轩') {
-                        stuId = 13;
-                    } else if (name === '刘浩宇') {
-                        stuId = 14;
-                    }
+                    if (name === '刘承轩') stuId = 13;
+                    else if (name === '刘浩宇') stuId = 14;
                     return {
                         id: index + 1,
                         studentId: String(stuId),
@@ -703,13 +733,23 @@
                     };
                 });
                 
-                saveData();
+                await saveData();
             }
             updateStats();
         }
 
-        function saveData() {
+        async function saveData() {
             localStorage.setItem('students', JSON.stringify(students));
+            // 后台同步到 Supabase
+            if (sb) {
+                try {
+                    await sb
+                        .from('sync_data')
+                        .upsert({ id: 1, payload: students, updated_at: new Date().toISOString() });
+                } catch (e) {
+                    // 静默失败，localStorage 已有备份
+                }
+            }
         }
 
         function updateStats() {
@@ -1048,8 +1088,15 @@
         function resetData() {
             if (confirm('确定要重置所有数据吗？这将清除所有学生记录并恢复到初始状态。')) {
                 localStorage.removeItem('students');
-                loadData();
-                renderStudents();
+                students = [];
+                // 清除 Supabase 数据
+                if (sb) {
+                    sb.from('sync_data').delete().eq('id', 1).then(() => {
+                        loadData().then(() => renderStudents());
+                    });
+                } else {
+                    loadData().then(() => renderStudents());
+                }
             }
         }
 
@@ -1098,8 +1145,26 @@
             renderStudents(e.target.value);
         });
 
-        loadData();
-        renderStudents();
+        // 启动：加载数据 + 渲染 + 实时监听
+        (async function init() {
+            await loadData();
+            renderStudents();
+
+            // 实时监听 Supabase 数据变更（其他设备修改时自动同步）
+            if (sb) {
+                sb
+                    .channel('sync_data_changes')
+                    .on('postgres_changes',
+                        { event: '*', schema: 'public', table: 'sync_data' },
+                        async () => {
+                            console.log('检测到云端数据变更，正在同步...');
+                            await loadData();
+                            renderStudents();
+                        }
+                    )
+                    .subscribe();
+            }
+        })();
     </script>
 </body>
 </html>
