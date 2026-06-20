@@ -395,10 +395,6 @@
             border-radius: 12px;
             margin-bottom: 10px;
             border-left: 5px solid;
-            transition: all 0.2s;
-        }
-
-        .history-item:hover {
         }
 
         .history-item.positive {
@@ -602,48 +598,6 @@
         let currentSort = 'studentId';
 
         const avatars = ['👨‍🎓', '👩‍🎓', '🧑‍🎓', '👦', '👧', '🧒', '👶', '🙋‍♂️', '🙋‍♀️', '🤓', '😎', '😊'];
-
-        // 汉字笔画数映射（常用姓氏，按正确笔画数）
-        const strokeCounts = {
-            '万':3,'干':3,'马':3,
-            '王':4,'韦':4,'叶':5,
-            '孙':6,'朱':6,'刘':6,'许':6,
-            '李':7,'宋':7,'吴':7,'陈':7,'杜':7,'邱':7,'邹':7,'张':7,
-            '孟':8,'罗':8,'周':8,'郑':8,'泽':8,
-            '郭':10,'高':10,'夏':10,'徐':10,
-            '曹':11,'黄':11,'龚':11,
-            '蒋':12,'韩':12,
-            '简':13,'詹':13
-        };
-
-        // 获取汉字笔画数
-        function getStrokeCount(char) {
-            return strokeCounts[char] || char.localeCompare('啊', 'zh-CN') < 0 ? 1 : 10;
-        }
-
-        // 按姓名笔画排序（先按姓氏，再按第二个字）
-        function sortByStrokes(a, b) {
-            const surnameA = a[0];
-            const surnameB = b[0];
-            const surnameStrokesA = getStrokeCount(surnameA);
-            const surnameStrokesB = getStrokeCount(surnameB);
-            
-            if (surnameStrokesA !== surnameStrokesB) {
-                return surnameStrokesA - surnameStrokesB;
-            }
-            
-            // 姓氏笔画相同，按第二个字
-            if (a.length > 1 && b.length > 1) {
-                const secondCharStrokesA = getStrokeCount(a[1]);
-                const secondCharStrokesB = getStrokeCount(b[1]);
-                if (secondCharStrokesA !== secondCharStrokesB) {
-                    return secondCharStrokesA - secondCharStrokesB;
-                }
-            }
-            
-            // 都相同，使用拼音
-            return a.localeCompare(b, 'zh-CN');
-        }
 
         function getAvatar() {
             return avatars[Math.floor(Math.random() * avatars.length)];
@@ -978,104 +932,78 @@
             openHistoryModal(studentId); // 重新渲染历史弹窗
         }
 
-        function deleteStudent(id) {
-            const student = students.find(s => s.id === id);
-            if (confirm(`确定要删除学生 "${student.name}" 吗？`)) {
-                students = students.filter(s => s.id !== id);
-                saveData();
-                renderStudents(document.getElementById('searchInput').value);
-            }
-        }
-
         function exportData() {
             const exportTime = new Date().toLocaleString('zh-CN');
-            
-            let studentContent = students.map((student) => {
-                let historyItems = '';
-                if (student.history && student.history.length > 0) {
-                    historyItems = student.history.map((h) => `
-                        <p style="margin: 8px 0;">
-                            • ${h.date}
-                            ${h.change >= 0 ? `（+${h.change}分）` : `（${h.change}分）`}
-                            ：${h.reason}
-                        </p>
-                    `).join('');
+
+            // 按学号排序
+            const sorted = [...students].sort((a, b) => Number(a.studentId) - Number(b.studentId));
+
+            const tableRows = sorted.map(s => {
+                const over = Math.max(0, s.score - 100);
+                let historyHtml = '';
+                if (s.history && s.history.length > 0) {
+                    historyHtml = s.history.map(h =>
+                        `<div style="margin:2px 0;">${h.date} ${h.change >= 0 ? '+' : ''}${h.change}分 ${h.reason}</div>`
+                    ).join('');
+                } else {
+                    historyHtml = '无';
                 }
-                
                 return `
-                <div style="page-break-inside: avoid; margin: 20px 0; padding: 15px 0; border-bottom: 1px solid #000;">
-                    <h3 style="margin: 0 0 10px 0; font-size: 18px;">
-                        学号 ${student.studentId} - ${student.name} | 当前操行分：${formatScore(student.score)} 分
-                    </h3>
-                    ${student.history && student.history.length > 0 ? `
-                        <div style="margin-left: 20px;">
-                            <p style="font-weight: bold; margin: 10px 0 5px 0;">历史记录：</p>
-                            ${historyItems}
-                        </div>
-                    ` : `
-                        <p style="margin-left: 20px; color: #333;">暂无历史记录</p>
-                    `}
-                </div>
-                `;
+                <tr>
+                    <td>${s.studentId}</td>
+                    <td>${s.name}</td>
+                    <td>${formatScore(s.score)}</td>
+                    <td>${over > 0 ? formatScore(over) : '0'}</td>
+                    <td style="font-size:12px;">${historyHtml}</td>
+                </tr>`;
             }).join('');
 
             const wordContent = `
-<!DOCTYPE html>
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns="http://www.w3.org/TR/REC-html40">
 <head>
     <meta charset="UTF-8">
     <title>2027届4班操行分</title>
     <style>
-        body { 
-            font-family: 宋体, SimSun, Microsoft YaHei, sans-serif; 
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-            color: #000;
-            font-size: 14px;
-        }
-        h1 { 
-            text-align: center; 
-            color: #000; 
-            font-size: 24px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #000;
-        }
-        .info { 
-            margin: 10px 0; 
-            text-align: center;
-            font-size: 14px;
-            color: #000;
-        }
-        .stats {
-            margin: 15px 0;
-            padding: 15px;
-            border: 1px solid #000;
-            text-align: center;
-        }
-        .stats span {
-            margin: 0 20px;
-        }
+        body { font-family: 宋体, SimSun, Microsoft YaHei, sans-serif; margin: 30px; color: #000; font-size: 14px; }
+        h1 { text-align: center; font-size: 22px; margin-bottom: 5px; }
+        .info { text-align: center; font-size: 12px; margin-bottom: 15px; color: #555; }
+        .summary { margin: 10px 0 15px 0; font-size: 14px; }
+        .summary span { margin-right: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 6px 8px; text-align: center; vertical-align: top; }
+        th { background: #ddd; font-weight: bold; font-size: 13px; }
+        td { font-size: 13px; }
+        td:nth-child(5) { text-align: left; }
     </style>
 </head>
 <body>
-    <h1>2027届4班操行分统计</h1>
+    <h1>2027届4班操行分统计表</h1>
     <div class="info">导出时间：${exportTime}</div>
-    <div class="stats">
+    <div class="summary">
         <span>学生人数：${students.length} 人</span>
         <span>最高分：${students.length > 0 ? formatScore(Math.max(...students.map(s => s.score))) : 0} 分</span>
         <span>最低分：${students.length > 0 ? formatScore(Math.min(...students.map(s => s.score))) : 0} 分</span>
         <span>超100分人数：${students.filter(s => s.score > 100).length} 人</span>
         <span>共超出：${formatScore(students.reduce((sum, s) => sum + Math.max(0, s.score - 100), 0))} 分</span>
     </div>
-    <div style="margin-top: 20px;"></div>
-    ${studentContent}
+    <table>
+        <thead>
+            <tr>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>操行分</th>
+                <th>超100分</th>
+                <th>历史记录</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${tableRows}
+        </tbody>
+    </table>
 </body>
-</html>
-            `;
+</html>`;
 
-            const blob = new Blob([wordContent], { type: 'application/msword' });
+            const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1086,7 +1014,7 @@
 
         function exportJSON() {
             const exportData = {
-                version: '1.2',
+                version: '1.3',
                 exportTime: new Date().toLocaleString('zh-CN'),
                 students: students
             };
