@@ -656,6 +656,7 @@
                 students = JSON.parse(saved);
             }
 
+            let supabaseReachable = false;
             // 1. 后台尝试从 Supabase 拉取最新数据（带超时 5 秒）
             if (sb) {
                 try {
@@ -668,6 +669,7 @@
                         .eq('id', 1)
                         .maybeSingle();
                     const { data, error } = await Promise.race([query, timeout.then(() => ({ data: null, error: 'timeout' }))]);
+                    supabaseReachable = !error;
                     if (!error && data && data.payload && data.payload.length > 0) {
                         students = data.payload;
                         localStorage.setItem('students', JSON.stringify(students));
@@ -677,45 +679,48 @@
                 }
             }
 
-            // 2. 如果都没有数据，初始化默认数据
+            // 2. 只有在 Supabase 可连通且确认无数据时，才初始化默认数据
+            //    避免 Supabase 不可达时误覆盖云端数据
             if (!students || students.length === 0) {
-                const studentNames = [
-                    '干贝蕾', '万乾江', '马远晨', '马雨潼',
-                    '王依恋', '王鏖杰', '王锐杰', '韦青怡',
-                    '叶静雯',
-                    '朱宇辰', '朱振豪', '刘雨轩', '刘浩宇', '刘承轩', '刘楷瑞', '许伦杰',
-                    '孙可欣',
-                    '杜依娜', '杜诗雨',
-                    '李彦希',
-                    '吴光曜', '吴庆宇',
-                    '邱俊豪', '邹汶呈',
-                    '宋煜鑫', '张竣杰',
-                    '陈俏妍', '陈炫君', '陈韵可',
-                    '罗紫芯', '周芯屹', '郑媛媛', '泽仁娜姆',
-                    '孟子恒',
-                    '夏赵杭', '徐桓燃', '高奕展', '郭嘉昕',
-                    '黄梦涵', '曹毅轩', '龚羿嘉', '龚新阳',
-                    '蒋震海', '韩康泳',
-                    '简思艺', '詹思钰'
-                ];
-                
-                students = studentNames.map((name, index) => {
-                    let stuId = index + 1;
-                    if (name === '刘承轩') stuId = 13;
-                    else if (name === '刘浩宇') stuId = 14;
-                    else if (name === '王锐杰') stuId = 6;
-                    else if (name === '王鏖杰') stuId = 7;
-                    return {
-                        id: index + 1,
-                        studentId: String(stuId),
-                        name: name,
-                        score: 80,
-                        history: [],
-                        avatar: getAvatar()
-                    };
-                });
-                
-                await saveData();
+                if (supabaseReachable || !sb) {
+                    const studentNames = [
+                        '干贝蕾', '万乾江', '马远晨', '马雨潼',
+                        '王依恋', '王鏖杰', '王锐杰', '韦青怡',
+                        '叶静雯',
+                        '朱宇辰', '朱振豪', '刘雨轩', '刘浩宇', '刘承轩', '刘楷瑞', '许伦杰',
+                        '孙可欣',
+                        '杜依娜', '杜诗雨',
+                        '李彦希',
+                        '吴光曜', '吴庆宇',
+                        '邱俊豪', '邹汶呈',
+                        '宋煜鑫', '张竣杰',
+                        '陈俏妍', '陈炫君', '陈韵可',
+                        '罗紫芯', '周芯屹', '郑媛媛', '泽仁娜姆',
+                        '孟子恒',
+                        '夏赵杭', '徐桓燃', '高奕展', '郭嘉昕',
+                        '黄梦涵', '曹毅轩', '龚羿嘉', '龚新阳',
+                        '蒋震海', '韩康泳',
+                        '简思艺', '詹思钰'
+                    ];
+
+                    students = studentNames.map((name, index) => {
+                        let stuId = index + 1;
+                        if (name === '刘承轩') stuId = 13;
+                        else if (name === '刘浩宇') stuId = 14;
+                        else if (name === '王锐杰') stuId = 6;
+                        else if (name === '王鏖杰') stuId = 7;
+                        return {
+                            id: index + 1,
+                            studentId: String(stuId),
+                            name: name,
+                            score: 80,
+                            history: [],
+                            avatar: getAvatar()
+                        };
+                    });
+
+                    await saveData();
+                }
             }
             updateStats();
         }
@@ -850,7 +855,7 @@
                             <div>
                                 <button class="btn btn-success btn-sm ${isAdmin ? '' : 'btn-locked'}" onclick="openUpdateScoreModal(${student.id}, 'add')">➕ 加分</button>
                                 <button class="btn btn-danger btn-sm ${isAdmin ? '' : 'btn-locked'}" onclick="openUpdateScoreModal(${student.id}, 'subtract')">➖ 减分</button>
-                                <button class="btn btn-info btn-sm ${isAdmin ? '' : 'btn-locked'}" onclick="openHistoryModal(${student.id})">📜 历史</button>
+                                <button class="btn btn-info btn-sm" onclick="openHistoryModal(${student.id})">📜 历史</button>
                             </div>
                         </div>
                     </div>
@@ -991,7 +996,6 @@
         }
 
         function openHistoryModal(id) {
-            if (!checkAdmin()) return;
             const student = students.find(s => s.id === id);
             currentStudentId = id;
             document.getElementById('historyTitle').textContent = `${student.name} 的操行分历史`;
@@ -1007,7 +1011,7 @@
                             <div class="history-reason">${h.reason}</div>
                             <div class="history-date">${h.date}</div>
                         </div>
-                        <button class="btn btn-danger btn-sm" style="flex-shrink:0;" onclick="deleteHistoryItem(${id}, ${idx})">🗑️ 删除</button>
+                        ${isAdmin ? `<button class="btn btn-danger btn-sm" style="flex-shrink:0;" onclick="deleteHistoryItem(${id}, ${idx})">🗑️ 删除</button>` : ''}
                     </div>
                 `).join('');
             }
