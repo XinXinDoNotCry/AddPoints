@@ -1022,14 +1022,14 @@
         function deleteHistoryItem(studentId, historyIndex) {
             if (!checkAdmin()) return;
             const student = students.find(s => s.id === studentId);
-            if (!student || !student.history || !student.history[index]) return;
-            const record = student.history[index];
+            if (!student || !student.history || !student.history[historyIndex]) return;
+            const record = student.history[historyIndex];
             const actionLabel = record.change >= 0 ? `撤销 +${record.change} 分` : `撤销 ${record.change} 分`;
             if (!confirm(`确定要删除这条记录吗？\n${record.date}\n${record.reason}\n该操作将${actionLabel}。`)) return;
 
             // 回滚分数：减去原 change（加分则扣回去，减分则加回去）
             student.score = Math.round((student.score - record.change) * 10) / 10;
-            student.history.splice(index, 1);
+            student.history.splice(historyIndex, 1);
 
             saveData();
             renderStudents(document.getElementById('searchInput').value);
