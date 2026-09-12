@@ -92,6 +92,68 @@
             gap: 12px;
         }
 
+        .class-bar {
+            padding: 16px 16px 0;
+            background: #f8f9fa;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .class-bar .btn {
+            flex-shrink: 0;
+        }
+
+        .class-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .class-screen-inner {
+            width: 100%;
+            max-width: 460px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 28px 22px;
+        }
+
+        .class-screen-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1f2937;
+            margin-bottom: 6px;
+        }
+
+        .class-screen-sub {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .class-screen-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .class-screen-list .btn {
+            width: 100%;
+            font-size: 18px;
+            padding: 18px;
+        }
+
+        .class-screen-inner > .btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+
         .search-box {
             width: 100%;
             position: relative;
@@ -496,11 +558,26 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="class-screen" id="classScreen">
+        <div class="class-screen-inner">
+            <div class="class-screen-title">📋 操行分管理系统</div>
+            <div class="class-screen-sub">请选择要进入的班级</div>
+            <div class="class-screen-list" id="classScreenList"></div>
+            <button class="btn btn-primary" id="classScreenNewClassBtn" onclick="openNewClassModal()">➕ 新增班级</button>
+            <button class="btn btn-danger" id="classScreenDeleteClassBtn" onclick="openDeleteClassModal()">🗑️ 删除班级</button>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display:none;">
         <header>
-            <h1>📋 2027届4班操行分管理系统</h1>
+            <h1 id="headerTitle">📋 操行分管理系统</h1>
             <p>智能管理，轻松记录</p>
         </header>
+
+        <div class="class-bar">
+            <button class="btn btn-primary" id="switchClassBtn" onclick="showClassScreen()">🔁 切换班级</button>
+            <button class="btn btn-success" id="addStudentBtn" onclick="openAddStudentModal()">➕ 添加学生</button>
+        </div>
 
         <div class="stats-bar">
             <div class="stat-item">
@@ -535,7 +612,8 @@
                 <option value="score-asc">按分数 (低→高)</option>
             </select>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <button class="admin-toggle" id="adminToggleBtn" onclick="toggleAdmin()" style="grid-column:span 2;">🔒 访客模式 — 点击解锁</button>
+                <button class="admin-toggle" data-admin-toggle onclick="toggleAdmin()" style="grid-column:span 2;">🔒 访客模式 — 点击解锁</button>
+                <button class="btn btn-secondary" id="changePasswordBtn" onclick="openChangePasswordModal()" style="grid-column:span 2;">🔑 修改密码</button>
                 <button class="btn btn-success" onclick="openBatchAddModal()" style="grid-column:span 2;">🏆 全班统一加分</button>
                 <button class="btn btn-warning" onclick="exportData()">📊 导出Word</button>
                 <button class="btn btn-info" onclick="exportJSON()">📁 导出JSON</button>
@@ -550,16 +628,80 @@
 
 
 
+    <div class="modal" id="addStudentModal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header">添加学生</div>
+            <div class="form-group">
+                <label>学生姓名</label>
+                <input type="text" id="newStudentName" placeholder="请输入学生姓名" onkeydown="if(event.key==='Enter')confirmAddStudent()">
+            </div>
+            <div class="form-group">
+                <label>学号（可选）</label>
+                <input type="text" id="newStudentId" placeholder="留空则自动分配">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('addStudentModal')">取消</button>
+                <button class="btn btn-success" onclick="confirmAddStudent()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="adminModal">
         <div class="modal-content" style="max-width:380px;">
             <div class="modal-header">🔐 管理员验证</div>
             <div class="form-group">
-                <label>请输入管理员密码</label>
+                <label>请输入「<span id="adminModalClass"></span>」的管理员密码</label>
                 <input type="text" id="adminPassword" placeholder="请输入密码" onkeydown="if(event.key==='Enter')verifyAdmin()">
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('adminModal')">取消</button>
                 <button class="btn btn-success" onclick="verifyAdmin()">验证</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="superAdminModal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header" id="superAdminTitle">最高权限验证</div>
+            <div class="form-group">
+                <label>请输入最高权限管理员密码</label>
+                <input type="text" id="superAdminPassword" placeholder="请输入密码" onkeydown="if(event.key==='Enter')verifySuperAdmin()">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('superAdminModal')">取消</button>
+                <button class="btn btn-success" onclick="verifySuperAdmin()">验证</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="deleteClassModal">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">🗑️ 删除班级</div>
+            <div style="padding:10px 16px;color:#6b7280;font-size:13px;">请选择要删除的班级（删除后不可恢复，会连同该班所有学生数据一起删除）</div>
+            <div id="deleteClassList" style="display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto;padding:0 16px 16px;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('deleteClassModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header">🔑 修改管理员密码</div>
+            <div class="form-group">
+                <label>当前班级：<span id="changePwdClass"></span></label>
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="text" id="newPassword" placeholder="请输入新密码">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="text" id="confirmPassword" placeholder="请再次输入新密码" onkeydown="if(event.key==='Enter')confirmChangePassword()">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('changePasswordModal')">取消</button>
+                <button class="btn btn-success" onclick="confirmChangePassword()">确认修改</button>
             </div>
         </div>
     </div>
@@ -639,9 +781,13 @@
         }
 
         let students = [];
+        let classData = {};        // { 班级名: [学生数组] }
+        let classPasswords = {};   // { 班级名: 管理员密码 }
+        let currentClass = '';     // 当前选中的班级名称
         let currentStudentId = null;
         let currentSort = 'studentId';
         let isAdmin = false;
+        let superAction = null;    // 超级管理员当前操作：'new' 或 'delete'
 
         const avatars = ['👨‍🎓', '👩‍🎓', '🧑‍🎓', '👦', '👧', '🧒', '👶', '🙋‍♂️', '🙋‍♀️', '🤓', '😎', '😊'];
 
@@ -649,11 +795,85 @@
             return avatars[Math.floor(Math.random() * avatars.length)];
         }
 
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function buildDefaultStudents() {
+            const studentNames = [
+                '干贝蕾', '万乾江', '马远晨', '马雨潼',
+                '王依恋', '王鏖杰', '王锐杰', '韦青怡',
+                '叶静雯',
+                '朱宇辰', '朱振豪', '刘雨轩', '刘浩宇', '刘承轩', '刘楷瑞', '许伦杰',
+                '孙可欣',
+                '杜依娜', '杜诗雨',
+                '李彦希',
+                '吴光曜', '吴庆宇',
+                '邱俊豪', '邹汶呈',
+                '宋煜鑫', '张竣杰',
+                '陈俏妍', '陈炫君', '陈韵可',
+                '罗紫芯', '周芯屹', '郑媛媛', '泽仁娜姆',
+                '孟子恒',
+                '夏赵杭', '徐桓燃', '高奕展', '郭嘉昕',
+                '黄梦涵', '曹毅轩', '龚羿嘉', '龚新阳',
+                '蒋震海', '韩康泳',
+                '简思艺', '詹思钰'
+            ];
+
+            return studentNames.map((name, index) => {
+                let stuId = index + 1;
+                if (name === '刘承轩') stuId = 13;
+                else if (name === '刘浩宇') stuId = 14;
+                else if (name === '王锐杰') stuId = 6;
+                else if (name === '王鏖杰') stuId = 7;
+                return {
+                    id: index + 1,
+                    studentId: String(stuId),
+                    name: name,
+                    score: 80,
+                    history: [],
+                    avatar: getAvatar()
+                };
+            });
+        }
+
         async function loadData() {
-            // 0. 先同步读取 localStorage，保证页面立即渲染
-            const saved = localStorage.getItem('students');
-            if (saved) {
-                students = JSON.parse(saved);
+            let needSave = false;
+
+            // 0. 先同步读取 localStorage（新格式：班级 → 学生数组）
+            const savedClasses = localStorage.getItem('addpoints_classes');
+            if (savedClasses) {
+                try {
+                    const parsed = JSON.parse(savedClasses);
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        classData = parsed;
+                    }
+                } catch (e) { /* 忽略损坏数据 */ }
+            }
+
+            // 读取 localStorage 中的班级密码
+            const savedPasswords = localStorage.getItem('addpoints_passwords');
+            if (savedPasswords) {
+                try {
+                    const parsed = JSON.parse(savedPasswords);
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        classPasswords = parsed;
+                    }
+                } catch (e) { /* 忽略损坏数据 */ }
+            }
+
+            // 兼容旧格式：localStorage 的 'students' 数组 → 归入「四班」
+            if (Object.keys(classData).length === 0) {
+                const oldStudents = localStorage.getItem('students');
+                if (oldStudents) {
+                    try {
+                        const arr = JSON.parse(oldStudents);
+                        if (Array.isArray(arr)) {
+                            classData['四班'] = arr;
+                            needSave = true;
+                        }
+                    } catch (e) { /* 忽略 */ }
+                }
             }
 
             let supabaseReachable = false;
@@ -670,69 +890,79 @@
                         .maybeSingle();
                     const { data, error } = await Promise.race([query, timeout.then(() => ({ data: null, error: 'timeout' }))]);
                     supabaseReachable = !error;
-                    if (!error && data && data.payload && data.payload.length > 0) {
-                        students = data.payload;
-                        localStorage.setItem('students', JSON.stringify(students));
+                    if (!error && data && data.payload) {
+                        const payload = data.payload;
+                        if (Array.isArray(payload)) {
+                            // 旧格式：数组 → 归入「四班」
+                            classData['四班'] = payload;
+                            needSave = true;
+                        } else if (payload && typeof payload === 'object') {
+                            // 新格式：班级对象，云端优先
+                            classData = payload;
+                        }
                     }
                 } catch (e) {
                     // Supabase 不可用，使用已有的 localStorage 数据
                 }
+
+                // 拉取班级密码（id=2）
+                try {
+                    const timeout2 = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('timeout')), 5000)
+                    );
+                    const query2 = sb
+                        .from('sync_data')
+                        .select('payload')
+                        .eq('id', 2)
+                        .maybeSingle();
+                    const res2 = await Promise.race([query2, timeout2.then(() => ({ data: null, error: 'timeout' }))]);
+                    if (!res2.error && res2.data && res2.data.payload && typeof res2.data.payload === 'object' && !Array.isArray(res2.data.payload)) {
+                        classPasswords = res2.data.payload;
+                    }
+                } catch (e) { /* 忽略 */ }
             }
 
-            // 2. 只有在 Supabase 可连通且确认无数据时，才初始化默认数据
-            //    避免 Supabase 不可达时误覆盖云端数据
-            if (!students || students.length === 0) {
+            // 2. 完全没有数据时，初始化默认「四班」（仅当 Supabase 连通或纯本地模式）
+            if (Object.keys(classData).length === 0) {
                 if (supabaseReachable || !sb) {
-                    const studentNames = [
-                        '干贝蕾', '万乾江', '马远晨', '马雨潼',
-                        '王依恋', '王鏖杰', '王锐杰', '韦青怡',
-                        '叶静雯',
-                        '朱宇辰', '朱振豪', '刘雨轩', '刘浩宇', '刘承轩', '刘楷瑞', '许伦杰',
-                        '孙可欣',
-                        '杜依娜', '杜诗雨',
-                        '李彦希',
-                        '吴光曜', '吴庆宇',
-                        '邱俊豪', '邹汶呈',
-                        '宋煜鑫', '张竣杰',
-                        '陈俏妍', '陈炫君', '陈韵可',
-                        '罗紫芯', '周芯屹', '郑媛媛', '泽仁娜姆',
-                        '孟子恒',
-                        '夏赵杭', '徐桓燃', '高奕展', '郭嘉昕',
-                        '黄梦涵', '曹毅轩', '龚羿嘉', '龚新阳',
-                        '蒋震海', '韩康泳',
-                        '简思艺', '詹思钰'
-                    ];
-
-                    students = studentNames.map((name, index) => {
-                        let stuId = index + 1;
-                        if (name === '刘承轩') stuId = 13;
-                        else if (name === '刘浩宇') stuId = 14;
-                        else if (name === '王锐杰') stuId = 6;
-                        else if (name === '王鏖杰') stuId = 7;
-                        return {
-                            id: index + 1,
-                            studentId: String(stuId),
-                            name: name,
-                            score: 80,
-                            history: [],
-                            avatar: getAvatar()
-                        };
-                    });
-
-                    await saveData();
+                    classData['四班'] = buildDefaultStudents();
+                    needSave = true;
                 }
             }
-            updateStats();
+
+            // 3. 确保四班默认密码存在
+            if (!classPasswords['四班']) {
+                classPasswords['四班'] = '我是刘楷瑞';
+                needSave = true;
+            }
+
+            // 4. 保持当前班级（若仍存在），否则清空等待用户选择
+            if (currentClass && classData[currentClass]) {
+                students = classData[currentClass];
+            } else {
+                currentClass = '';
+                students = [];
+            }
+
+            // 5. 仅在发生迁移/初始化时写库；否则只更新本地缓存，避免实时同步反复写库
+            if (needSave) {
+                await saveData();
+            } else {
+                localStorage.setItem('addpoints_classes', JSON.stringify(classData));
+                localStorage.setItem('addpoints_passwords', JSON.stringify(classPasswords));
+            }
         }
 
         async function saveData() {
-            localStorage.setItem('students', JSON.stringify(students));
+            localStorage.setItem('addpoints_classes', JSON.stringify(classData));
+            localStorage.setItem('addpoints_passwords', JSON.stringify(classPasswords));
+            localStorage.setItem('addpoints_current_class', currentClass);
             // 后台同步到 Supabase
             if (sb) {
                 try {
-                    await sb
-                        .from('sync_data')
-                        .upsert({ id: 1, payload: students, updated_at: new Date().toISOString() });
+                    const now = new Date().toISOString();
+                    await sb.from('sync_data').upsert({ id: 1, payload: classData, updated_at: now });
+                    await sb.from('sync_data').upsert({ id: 2, payload: classPasswords, updated_at: now });
                 } catch (e) {
                     // 静默失败，localStorage 已有备份
                 }
@@ -856,6 +1086,7 @@
                                 <button class="btn btn-success btn-sm ${isAdmin ? '' : 'btn-locked'}" onclick="openUpdateScoreModal(${student.id}, 'add')">➕ 加分</button>
                                 <button class="btn btn-danger btn-sm ${isAdmin ? '' : 'btn-locked'}" onclick="openUpdateScoreModal(${student.id}, 'subtract')">➖ 减分</button>
                                 <button class="btn btn-info btn-sm" onclick="openHistoryModal(${student.id})">📜 历史</button>
+                                ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteStudent(${student.id})">🗑️ 删除</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -881,14 +1112,26 @@
             return true;
         }
 
+        function updateAdminToggleButtons() {
+            document.querySelectorAll('[data-admin-toggle]').forEach(btn => {
+                if (isAdmin) {
+                    btn.textContent = '🔓 管理员模式';
+                    btn.classList.add('active');
+                } else {
+                    btn.textContent = '🔒 访客模式 — 点击解锁';
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
         function toggleAdmin() {
             if (isAdmin) {
                 isAdmin = false;
-                document.getElementById('adminToggleBtn').textContent = '🔒 访客模式 — 点击解锁';
-                document.getElementById('adminToggleBtn').classList.remove('active');
+                updateAdminToggleButtons();
                 updateAdminUI();
             } else {
                 document.getElementById('adminPassword').value = '';
+                document.getElementById('adminModalClass').textContent = currentClass || '四班';
                 openModal('adminModal');
                 setTimeout(() => document.getElementById('adminPassword').focus(), 100);
             }
@@ -896,10 +1139,10 @@
 
         function verifyAdmin() {
             const pwd = document.getElementById('adminPassword').value;
-            if (pwd === '我是刘楷瑞') {
+            const correct = classPasswords[currentClass] || '我是刘楷瑞';
+            if (pwd === correct) {
                 isAdmin = true;
-                document.getElementById('adminToggleBtn').textContent = '🔓 管理员模式';
-                document.getElementById('adminToggleBtn').classList.add('active');
+                updateAdminToggleButtons();
                 closeModal('adminModal');
                 updateAdminUI();
             } else {
@@ -911,7 +1154,19 @@
 
         function updateAdminUI() {
             // 切换控制面板按钮状态（排除管理员按钮本身）
-            document.querySelectorAll('.controls button:not(#adminToggleBtn), .controls select').forEach(el => {
+            document.querySelectorAll('.controls button:not([data-admin-toggle]), .controls select').forEach(el => {
+                if (isAdmin) {
+                    el.classList.remove('btn-locked');
+                    el.disabled = false;
+                } else {
+                    el.classList.add('btn-locked');
+                    el.disabled = true;
+                }
+            });
+            // 需要管理员的按钮：添加学生 / 修改密码（切换班级保持可用）
+            ['addStudentBtn', 'changePasswordBtn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
                 if (isAdmin) {
                     el.classList.remove('btn-locked');
                     el.disabled = false;
@@ -921,6 +1176,190 @@
                 }
             });
             renderStudents(document.getElementById('searchInput').value);
+        }
+
+        function renderClassScreen() {
+            const list = document.getElementById('classScreenList');
+            if (!list) return;
+            const keys = Object.keys(classData);
+            list.innerHTML = keys.length === 0
+                ? '<div style="padding:20px;text-align:center;color:#6b7280;">暂无班级</div>'
+                : keys.map((c, i) =>
+                    `<button class="btn btn-info" onclick="enterClassByIndex(${i})">${escapeHtml(c)}</button>`
+                ).join('');
+        }
+
+        function showClassScreen() {
+            currentClass = '';
+            students = [];
+            isAdmin = false;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('classScreen').style.display = 'flex';
+            renderClassScreen();
+        }
+
+        function enterClassByIndex(i) {
+            const name = Object.keys(classData)[i];
+            if (name !== undefined) enterClass(name);
+        }
+
+        function enterClass(name) {
+            if (!classData[name]) classData[name] = [];
+            currentClass = name;
+            localStorage.setItem('addpoints_current_class', name);
+            students = classData[name] || [];
+            currentStudentId = null;
+            isAdmin = false;   // 每个班级独立密码，进入新班级默认访客
+            updateAdminToggleButtons();
+            document.getElementById('classScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            updateHeader();
+            updateAdminUI();
+        }
+
+        function updateHeader() {
+            const el = document.getElementById('headerTitle');
+            if (el) {
+                el.textContent = currentClass ? `📋 ${currentClass}操行分管理系统` : '📋 操行分管理系统';
+            }
+        }
+
+        function openNewClassModal() {
+            superAction = 'new';
+            document.getElementById('superAdminTitle').textContent = '➕ 新增班级 — 最高权限验证';
+            document.getElementById('superAdminPassword').value = '';
+            openModal('superAdminModal');
+            setTimeout(() => document.getElementById('superAdminPassword').focus(), 100);
+        }
+
+        function openDeleteClassModal() {
+            superAction = 'delete';
+            document.getElementById('superAdminTitle').textContent = '🗑️ 删除班级 — 最高权限验证';
+            document.getElementById('superAdminPassword').value = '';
+            openModal('superAdminModal');
+            setTimeout(() => document.getElementById('superAdminPassword').focus(), 100);
+        }
+
+        function verifySuperAdmin() {
+            const pwd = document.getElementById('superAdminPassword').value;
+            if (pwd === '208329') {
+                closeModal('superAdminModal');
+                if (superAction === 'new') {
+                    doNewClass();
+                } else if (superAction === 'delete') {
+                    showDeleteClassList();
+                }
+            } else {
+                alert('最高权限密码错误！');
+                document.getElementById('superAdminPassword').value = '';
+                document.getElementById('superAdminPassword').focus();
+            }
+        }
+
+        function doNewClass() {
+            const raw = prompt('请输入新班级名称（如：五班）：', '');
+            if (raw === null) return;
+            const name = raw.trim();
+            if (!name) { alert('班级名称不能为空'); return; }
+            if (classData[name]) { alert('该班级已存在'); return; }
+            const pwd = prompt(`请设置「${name}」的管理员密码：`, '');
+            if (pwd === null) return;
+            const pwdTrim = pwd.trim();
+            if (!pwdTrim) { alert('密码不能为空，班级创建已取消'); return; }
+            classData[name] = [];
+            classPasswords[name] = pwdTrim;
+            saveData().then(() => {
+                renderClassScreen();
+                enterClass(name);
+            });
+        }
+
+        function showDeleteClassList() {
+            const list = document.getElementById('deleteClassList');
+            const keys = Object.keys(classData);
+            if (keys.length === 0) {
+                list.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;">暂无班级可删除</div>';
+            } else {
+                list.innerHTML = keys.map((c, i) =>
+                    `<button class="btn btn-danger" onclick="confirmDeleteClassByIndex(${i})">🗑️ ${escapeHtml(c)}</button>`
+                ).join('');
+            }
+            openModal('deleteClassModal');
+        }
+
+        function confirmDeleteClassByIndex(i) {
+            const name = Object.keys(classData)[i];
+            if (!name) return;
+            if (!confirm(`确定要删除班级「${name}」吗？\n该操作将同时删除该班所有学生数据，且不可恢复。`)) return;
+            delete classData[name];
+            delete classPasswords[name];
+            if (currentClass === name) {
+                currentClass = '';
+                students = [];
+            }
+            saveData().then(() => {
+                closeModal('deleteClassModal');
+                renderClassScreen();
+            });
+        }
+
+        function openChangePasswordModal() {
+            if (!checkAdmin()) return;
+            document.getElementById('changePwdClass').textContent = currentClass;
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            openModal('changePasswordModal');
+        }
+
+        function confirmChangePassword() {
+            const pwd = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            if (!pwd) { alert('请输入新密码'); return; }
+            if (pwd !== confirm) { alert('两次输入的密码不一致'); return; }
+            classPasswords[currentClass] = pwd;
+            saveData().then(() => {
+                closeModal('changePasswordModal');
+                alert('密码修改成功！');
+            });
+        }
+
+        function openAddStudentModal() {
+            if (!checkAdmin()) return;
+            document.getElementById('newStudentName').value = '';
+            document.getElementById('newStudentId').value = '';
+            openModal('addStudentModal');
+            setTimeout(() => document.getElementById('newStudentName').focus(), 100);
+        }
+
+        function confirmAddStudent() {
+            const name = document.getElementById('newStudentName').value.trim();
+            if (!name) { alert('请输入学生姓名'); return; }
+            const studentId = document.getElementById('newStudentId').value.trim();
+            const maxId = students.reduce((m, s) => Math.max(m, s.id), 0);
+            students.push({
+                id: maxId + 1,
+                studentId: studentId || String(maxId + 1),
+                name: name,
+                score: 80,
+                history: [],
+                avatar: getAvatar()
+            });
+            saveData().then(() => {
+                renderStudents(document.getElementById('searchInput').value);
+                closeModal('addStudentModal');
+            });
+        }
+
+        function deleteStudent(id) {
+            if (!checkAdmin()) return;
+            const idx = students.findIndex(s => s.id === id);
+            if (idx === -1) return;
+            const student = students[idx];
+            if (!confirm(`确定要删除学生「${student.name}」吗？\n该操作将同时删除其所有历史记录，且不可恢复。`)) return;
+            students.splice(idx, 1);
+            saveData().then(() => {
+                renderStudents(document.getElementById('searchInput').value);
+            });
         }
 
         function openUpdateScoreModal(id, type) {
@@ -1067,7 +1506,7 @@
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns="http://www.w3.org/TR/REC-html40">
 <head>
     <meta charset="UTF-8">
-    <title>2027届4班操行分</title>
+    <title>${currentClass}操行分</title>
     <style>
         body { font-family: 宋体, SimSun, Microsoft YaHei, sans-serif; margin: 30px; color: #000; font-size: 14px; }
         h1 { text-align: center; font-size: 22px; margin-bottom: 5px; }
@@ -1082,7 +1521,7 @@
     </style>
 </head>
 <body>
-    <h1>2027届4班操行分统计表</h1>
+    <h1>${currentClass}操行分统计表</h1>
     <div class="info">导出时间：${exportTime}</div>
     <div class="summary">
         <span>学生人数：${students.length} 人</span>
@@ -1112,7 +1551,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `2027届4班操行分_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.doc`;
+            a.download = `${currentClass}操行分_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.doc`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1121,6 +1560,7 @@
             if (!checkAdmin()) return;
             const exportData = {
                 version: '1.3',
+                className: currentClass,
                 exportTime: new Date().toLocaleString('zh-CN'),
                 students: students
             };
@@ -1128,7 +1568,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `操行分备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.json`;
+            a.download = `${currentClass}操行分备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1149,8 +1589,9 @@
                             alert('无效的备份文件！请选择正确的 JSON 文件。');
                             return;
                         }
-                        if (!confirm(`即将导入 ${data.students.length} 名学生的数据（备份时间：${data.exportTime || '未知'}），当前数据将被覆盖，确定继续？`)) return;
-                        students = data.students;
+                        if (!confirm(`即将导入 ${data.students.length} 名学生的数据（备份时间：${data.exportTime || '未知'}），当前班级「${currentClass}」的数据将被覆盖，确定继续？`)) return;
+                        classData[currentClass] = data.students;
+                        students = classData[currentClass];
                         saveData().then(() => {
                             renderStudents(document.getElementById('searchInput').value);
                             alert('数据导入成功！');
@@ -1166,16 +1607,26 @@
 
         function resetData() {
             if (!checkAdmin()) return;
-            if (confirm('确定要重置所有数据吗？这将清除所有学生记录并恢复到初始状态。')) {
-                localStorage.removeItem('students');
+            if (confirm('确定要重置所有数据吗？这将清除所有班级和学生记录，并恢复到初始状态（仅保留四班默认数据）。')) {
+                classData = {};
+                classPasswords = {};
                 students = [];
-                // 清除 Supabase 数据
+                currentClass = '';
+                isAdmin = false;
+                localStorage.removeItem('addpoints_classes');
+                localStorage.removeItem('addpoints_passwords');
+                localStorage.removeItem('addpoints_current_class');
+                localStorage.removeItem('students');
+                const finish = () => {
+                    loadData().then(() => showClassScreen());
+                };
+                // 清除 Supabase 数据（班级数据 + 密码）
                 if (sb) {
-                    sb.from('sync_data').delete().eq('id', 1).then(() => {
-                        loadData().then(() => renderStudents());
-                    });
+                    sb.from('sync_data').delete().eq('id', 1).then(() =>
+                        sb.from('sync_data').delete().eq('id', 2).then(finish)
+                    );
                 } else {
-                    loadData().then(() => renderStudents());
+                    finish();
                 }
             }
         }
@@ -1192,7 +1643,7 @@
             const value = parseInt(document.getElementById('batchScoreValue').value);
             const reason = document.getElementById('batchReason').value;
 
-            if (isNaN(scoreValue) || scoreValue < 1) {
+            if (isNaN(value) || value < 1) {
                 alert('请输入有效的加分分值！');
                 return;
             }
@@ -1205,12 +1656,12 @@
             const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
             students.forEach(student => {
-                student.score += scoreValue;
+                student.score += value;
                 if (!student.history) {
                     student.history = [];
                 }
                 student.history.unshift({
-                    change: scoreValue,
+                    change: value,
                     reason: reason,
                     date: dateStr
                 });
@@ -1220,7 +1671,7 @@
             renderStudents();
             closeModal('batchAddModal');
 
-            alert(`已成功为全班 ${students.length} 名学生每人加 ${scoreValue} 分！`);
+            alert(`已成功为全班 ${students.length} 名学生每人加 ${value} 分！`);
         }
 
         document.getElementById('searchInput').addEventListener('input', function(e) {
@@ -1230,7 +1681,7 @@
         // 启动：加载数据 + 渲染 + 实时监听
         (async function init() {
             await loadData();
-            renderStudents();
+            renderClassScreen();
 
             // 初始化访客模式：禁用所有操作按钮
             updateAdminUI();
@@ -1251,7 +1702,12 @@
                         async () => {
                             console.log('检测到云端数据变更，正在同步...');
                             await loadData();
-                            renderStudents();
+                            if (currentClass) {
+                                updateHeader();
+                                renderStudents(document.getElementById('searchInput').value);
+                            } else {
+                                renderClassScreen();
+                            }
                         }
                     )
                     .subscribe();
