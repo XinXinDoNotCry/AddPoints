@@ -1607,28 +1607,24 @@
 
         function resetData() {
             if (!checkAdmin()) return;
-            if (confirm('确定要重置所有数据吗？这将清除所有班级和学生记录，并恢复到初始状态（仅保留四班默认数据）。')) {
-                classData = {};
-                classPasswords = {};
-                students = [];
-                currentClass = '';
-                isAdmin = false;
-                localStorage.removeItem('addpoints_classes');
-                localStorage.removeItem('addpoints_passwords');
-                localStorage.removeItem('addpoints_current_class');
-                localStorage.removeItem('students');
-                const finish = () => {
-                    loadData().then(() => showClassScreen());
-                };
-                // 清除 Supabase 数据（班级数据 + 密码）
-                if (sb) {
-                    sb.from('sync_data').delete().eq('id', 1).then(() =>
-                        sb.from('sync_data').delete().eq('id', 2).then(finish)
-                    );
-                } else {
-                    finish();
-                }
+            if (!currentClass) {
+                alert('请先选择班级！');
+                return;
             }
+            if (!confirm(`确定要重置「${currentClass}」的分数吗？所有学生分数将恢复为 80 分并清空历史记录，学生名单保持不变。此操作不会删除班级或学生，也不会影响其他班级。`)) return;
+
+            // 仅重置当前班级所有学生的分数与历史，不删除学生
+            students.forEach(s => {
+                s.score = 80;
+                s.history = [];
+            });
+            currentStudentId = null;
+
+            // 写回 localStorage 与云端（不删除班级/学生，不动其他班和密码）
+            saveData();
+            updateStats();
+            renderStudents(document.getElementById('searchInput').value);
+            updateHeader();
         }
 
         function openBatchAddModal() {
